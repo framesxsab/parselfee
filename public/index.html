@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parselfee - Hostel Delivery, Your Way</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== AUTH SCREEN ===================== -->
+<section class="page" id="page-auth">
+    <div class="auth-wrapper">
+        <div class="auth-bg-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="brand-icon">&#x1F4E6;</span>
+                <span class="brand-text">parsel<span class="brand-accent">fee</span></span>
+            </div>
+            <p class="auth-tagline">Hostel delivery by your peers</p>
+
+            <!-- Login Form -->
+            <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
+                <h2 class="auth-title">Welcome back</h2>
+                <div class="form-group">
+                    <label class="form-label">College Email</label>
+                    <input type="email" class="form-input" id="loginEmail" placeholder="you@rknec.in" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Min 8 characters" required minlength="8">
+                </div>
+                <div class="auth-error" id="loginError"></div>
+                <button type="submit" class="btn btn-primary btn-lg btn-full" id="loginBtn">
+                    Log In <span class="btn-arrow">&rarr;</span>
+                </button>
+                <p class="auth-switch">
+                    Don't have an account? <a href="#" onclick="showSignup(event)">Sign up</a>
+                </p>
+                <p class="auth-domain-note">Only @rknec.in and @rbunagpur.in emails</p>
+            </form>
+
+            <!-- Signup Form -->
+            <form class="auth-form" id="signupForm" style="display:none" onsubmit="handleSignup(event)">
+                <h2 class="auth-title">Create account</h2>
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="signupName" placeholder="Your name" required minlength="2" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">College Email</label>
+                    <input type="email" class="form-input" id="signupEmail" placeholder="you@rknec.in" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Min 8 characters" required minlength="8">
+                </div>
+                <div class="auth-error" id="signupError"></div>
+                <button type="submit" class="btn btn-primary btn-lg btn-full" id="signupBtn">
+                    Create Account <span class="btn-arrow">&rarr;</span>
+                </button>
+                <p class="auth-switch">
+                    Already have an account? <a href="#" onclick="showLogin(event)">Log in</a>
+                </p>
+                <p class="auth-domain-note">Only @rknec.in and @rbunagpur.in emails</p>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== NAVBAR (hidden until auth) ===================== -->
+<nav class="navbar hidden" id="navbar">
+    <div class="nav-brand" onclick="navigate('home')">
+        <span class="brand-icon">&#x1F4E6;</span>
+        <span class="brand-text">parsel<span class="brand-accent">fee</span></span>
+    </div>
+    <div class="nav-links">
+        <button class="nav-link active" data-page="home" onclick="navigate('home')">Home</button>
+        <button class="nav-link" data-page="place-order" onclick="navigate('place-order')">Place Order</button>
+        <button class="nav-link" data-page="browse" onclick="navigate('browse')">Deliver</button>
+        <button class="nav-link" data-page="my-orders" onclick="navigate('my-orders')">My Orders</button>
+        <button class="nav-link" data-page="profile" onclick="navigate('profile')">Profile</button>
+    </div>
+    <div class="nav-right">
+        <span class="nav-user" id="navUser"></span>
+        <button class="btn btn-sm btn-outline" onclick="handleLogout()">Logout</button>
+    </div>
+    <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+    <button class="nav-link active" data-page="home" onclick="navigate('home')">Home</button>
+    <button class="nav-link" data-page="place-order" onclick="navigate('place-order')">Place Order</button>
+    <button class="nav-link" data-page="browse" onclick="navigate('browse')">Deliver</button>
+    <button class="nav-link" data-page="my-orders" onclick="navigate('my-orders')">My Orders</button>
+    <button class="nav-link" data-page="profile" onclick="navigate('profile')">Profile</button>
+    <button class="nav-link" onclick="handleLogout()">Logout</button>
+</div>
+
+<!-- ===================== HOME PAGE ===================== -->
+<section class="page" id="page-home">
+    <div class="hero">
+        <div class="hero-bg-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">RCOEM Hostels</div>
+            <h1 class="hero-title">
+                Can't pick up<br>your parcel?<br>
+                <span class="hero-highlight">We got you.</span>
+            </h1>
+            <p class="hero-subtitle">
+                Set a fee. Someone delivers. Everyone wins.
+                Food, packages, anything from gate to your room.
+            </p>
+            <div class="hero-actions">
+                <button class="btn btn-primary btn-lg" onclick="navigate('place-order')">
+                    Place an Order
+                    <span class="btn-arrow">&rarr;</span>
+                </button>
+                <button class="btn btn-outline btn-lg" onclick="navigate('browse')">
+                    Earn by Delivering
+                </button>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number" id="stat-orders">0</span>
+                    <span class="stat-label">Orders Placed</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-number" id="stat-delivered">0</span>
+                    <span class="stat-label">Delivered</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-number" id="stat-earned">&#8377;0</span>
+                    <span class="stat-label">Earned by Peers</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="hero-card card-float-1">
+                <div class="mini-order">
+                    <span class="mini-emoji">&#x1F35C;</span>
+                    <div>
+                        <strong>Ramen from Gate</strong>
+                        <span class="mini-fee">&#8377;20 fee</span>
+                    </div>
+                    <span class="mini-status status-active">Live</span>
+                </div>
+            </div>
+            <div class="hero-card card-float-2">
+                <div class="mini-order">
+                    <span class="mini-emoji">&#x1F4E6;</span>
+                    <div>
+                        <strong>Amazon Parcel</strong>
+                        <span class="mini-fee">&#8377;30 fee</span>
+                    </div>
+                    <span class="mini-status status-done">Done</span>
+                </div>
+            </div>
+            <div class="hero-card card-float-3">
+                <div class="mini-order">
+                    <span class="mini-emoji">&#x2615;</span>
+                    <div>
+                        <strong>Coffee from Canteen</strong>
+                        <span class="mini-fee">&#8377;15 fee</span>
+                    </div>
+                    <span class="mini-status status-accepted">Accepted</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section how-it-works">
+        <h2 class="section-title">How it works</h2>
+        <div class="steps-grid">
+            <div class="step-card" style="--delay: 0">
+                <div class="step-number">01</div>
+                <div class="step-icon">&#x1F4DD;</div>
+                <h3>Place Order</h3>
+                <p>Tell us what you need, where it is, and where to deliver. Set your fee.</p>
+            </div>
+            <div class="step-card" style="--delay: 1">
+                <div class="step-number">02</div>
+                <div class="step-icon">&#x1F91D;</div>
+                <h3>Someone Accepts</h3>
+                <p>A fellow student sees your order and accepts delivery for agreed fee.</p>
+            </div>
+            <div class="step-card" style="--delay: 2">
+                <div class="step-number">03</div>
+                <div class="step-icon">&#x1F6B6;</div>
+                <h3>Pickup & Deliver</h3>
+                <p>They pick up your item and bring it right to your room or hostel gate.</p>
+            </div>
+            <div class="step-card" style="--delay: 3">
+                <div class="step-number">04</div>
+                <div class="step-icon">&#x1F4B0;</div>
+                <h3>Pay & Rate</h3>
+                <p>Confirm delivery, pay agreed fee. Rate your experience. Done!</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PLACE ORDER PAGE ===================== -->
+<section class="page" id="page-place-order">
+    <div class="page-container">
+        <div class="page-header">
+            <h1 class="page-title">Place an Order</h1>
+            <p class="page-desc">Tell us what you need delivered. Set your terms.</p>
+        </div>
+        <form class="order-form" id="orderForm" onsubmit="placeOrder(event)">
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">What do you need?</label>
+                    <input type="text" class="form-input" id="itemDesc" placeholder="e.g., Biryani from Zomato at main gate" required maxlength="500">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Pickup Location</label>
+                    <select class="form-input form-select" id="pickupLocation" required>
+                        <option value="">Select pickup spot</option>
+                        <option value="Main Gate">Main Gate</option>
+                        <option value="Back Gate">Back Gate</option>
+                        <option value="Canteen">Canteen</option>
+                        <option value="Mess">Mess</option>
+                        <option value="Library">Library</option>
+                        <option value="Academic Block">Academic Block</option>
+                        <option value="Other">Other (specify in notes)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Deliver To</label>
+                    <select class="form-input form-select" id="deliverTo" required>
+                        <option value="">Select delivery spot</option>
+                        <option value="Room">My Room</option>
+                        <option value="Hostel Gate">Hostel Gate</option>
+                        <option value="Common Room">Common Room</option>
+                        <option value="Study Hall">Study Hall</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Room / Hostel Details</label>
+                    <input type="text" class="form-input" id="roomDetails" placeholder="e.g., Hostel B, Room 204" required maxlength="200">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Delivery Fee (&#8377;)</label>
+                    <div class="fee-input-wrap">
+                        <span class="fee-currency">&#8377;</span>
+                        <input type="number" class="form-input fee-input" id="deliveryFee" min="5" max="500" value="20" required>
+                    </div>
+                    <div class="fee-suggestions">
+                        <button type="button" class="fee-chip" onclick="setFee(10)">&#8377;10</button>
+                        <button type="button" class="fee-chip" onclick="setFee(20)">&#8377;20</button>
+                        <button type="button" class="fee-chip" onclick="setFee(30)">&#8377;30</button>
+                        <button type="button" class="fee-chip" onclick="setFee(50)">&#8377;50</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">When do you need it?</label>
+                    <select class="form-input form-select" id="urgency" required>
+                        <option value="asap">ASAP</option>
+                        <option value="30min">Within 30 minutes</option>
+                        <option value="1hr">Within 1 hour</option>
+                        <option value="scheduled">Schedule for later</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width schedule-group" id="scheduleGroup" style="display:none;">
+                    <label class="form-label">Schedule Date & Time</label>
+                    <input type="datetime-local" class="form-input" id="scheduleTime">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label">Additional Notes</label>
+                    <textarea class="form-input form-textarea" id="orderNotes" placeholder="Any special instructions? Contact number? OTP for parcel?" rows="3" maxlength="500"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg btn-full" id="placeOrderBtn">
+                    Post Order &mdash; &#8377;<span id="feePreview">20</span> delivery fee
+                    <span class="btn-arrow">&rarr;</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ===================== BROWSE / DELIVER PAGE ===================== -->
+<section class="page" id="page-browse">
+    <div class="page-container">
+        <div class="page-header">
+            <h1 class="page-title">Available Deliveries</h1>
+            <p class="page-desc">Pick up orders, earn fees. Easy money between classes.</p>
+        </div>
+
+        <div class="browse-filters">
+            <button class="filter-chip active" onclick="filterOrders('all', this)">All</button>
+            <button class="filter-chip" onclick="filterOrders('Main Gate', this)">Main Gate</button>
+            <button class="filter-chip" onclick="filterOrders('Back Gate', this)">Back Gate</button>
+            <button class="filter-chip" onclick="filterOrders('Canteen', this)">Canteen</button>
+            <button class="filter-chip" onclick="filterOrders('Mess', this)">Mess</button>
+        </div>
+
+        <div class="orders-grid" id="browseOrdersGrid"></div>
+
+        <div class="empty-state" id="browseEmpty" style="display:none;">
+            <div class="empty-icon">&#x1F4AD;</div>
+            <h3>No orders right now</h3>
+            <p>Check back soon. Orders pop up all the time!</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== MY ORDERS PAGE ===================== -->
+<section class="page" id="page-my-orders">
+    <div class="page-container">
+        <div class="page-header">
+            <h1 class="page-title">My Orders</h1>
+            <p class="page-desc">Track your orders and deliveries in one place.</p>
+        </div>
+
+        <div class="orders-tabs">
+            <button class="tab-btn active" onclick="switchOrderTab('placed', this)">Orders I Placed</button>
+            <button class="tab-btn" onclick="switchOrderTab('accepted', this)">Orders I'm Delivering</button>
+        </div>
+
+        <div class="orders-list" id="myOrdersList"></div>
+
+        <div class="empty-state" id="myOrdersEmpty" style="display:none;">
+            <div class="empty-icon">&#x1F4CB;</div>
+            <h3>Nothing here yet</h3>
+            <p>Place an order or accept a delivery to get started!</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PROFILE PAGE ===================== -->
+<section class="page" id="page-profile">
+    <div class="page-container">
+        <div class="profile-layout">
+            <div class="profile-card">
+                <div class="profile-avatar" id="profileAvatar">S</div>
+                <div class="profile-info">
+                    <input type="text" class="profile-name-input" id="profileName" placeholder="Your Name">
+                    <input type="email" class="profile-email-display" id="profileEmail" disabled>
+                    <input type="text" class="profile-room-input" id="profileHostel" placeholder="Hostel (e.g., Hostel B)">
+                    <input type="text" class="profile-room-input" id="profileRoom" placeholder="Room Number">
+                    <input type="tel" class="profile-phone-input" id="profilePhone" placeholder="Phone Number">
+                </div>
+                <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+            </div>
+
+            <div class="wallet-card">
+                <div class="wallet-header">
+                    <h3>Wallet</h3>
+                    <span class="wallet-badge">&#x26A1; Live</span>
+                </div>
+                <div class="wallet-balance">
+                    <span class="wallet-label">Total Earned</span>
+                    <span class="wallet-amount" id="walletEarned">&#8377;0</span>
+                </div>
+                <div class="wallet-balance">
+                    <span class="wallet-label">Total Spent on Fees</span>
+                    <span class="wallet-amount wallet-spent" id="walletSpent">&#8377;0</span>
+                </div>
+                <div class="wallet-divider"></div>
+                <div class="wallet-stats-row">
+                    <div class="wallet-stat">
+                        <span class="wallet-stat-num" id="profileDelivered">0</span>
+                        <span class="wallet-stat-label">Delivered</span>
+                    </div>
+                    <div class="wallet-stat">
+                        <span class="wallet-stat-num" id="profileOrdered">0</span>
+                        <span class="wallet-stat-label">Ordered</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== ORDER DETAIL MODAL ===================== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

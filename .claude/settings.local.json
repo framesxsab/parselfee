@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('./db/schema'\\).getDb\\(\\); console.log\\('DB OK'\\); require\\('./db/schema'\\).closeDb\\(\\);\")"
+    ]
+  }
+}
