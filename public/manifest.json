@@ -1,0 +1,19 @@
+{
+    "name": "ParselFee — Hostel Delivery",
+    "short_name": "ParselFee",
+    "description": "Peer-to-peer hostel delivery service. Set a fee, someone delivers.",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "theme_color": "#0f0f1a",
+    "background_color": "#0f0f1a",
+    "categories": ["lifestyle", "utilities"],
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ]
+}
