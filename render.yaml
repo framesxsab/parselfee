@@ -1,0 +1,147 @@
+databases:
+  - name: parselfee-db
+    plan: free
+    databaseName: parselfee
+    user: parselfee
+
+services:
+  - type: web
+    name: parselfee
+    plan: free
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: REQUEST_BODY_LIMIT
+        value: 10kb
+      - key: ALLOWED_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_SECRET_MIN_LENGTH
+        value: "32"
+      - key: JWT_TOKEN_EXPIRY
+        value: 7d
+      - key: AUTH_COOKIE_NAME
+        value: token
+      - key: AUTH_COOKIE_MAX_AGE_MS
+        value: "604800000"
+      - key: AUTH_COOKIE_SAME_SITE
+        value: lax
+      - key: BCRYPT_SALT_ROUNDS
+        value: "12"
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: rknec.in,rbunagpur.in
+      - key: EMAIL_MAX_LENGTH
+        value: "254"
+      - key: NAME_MIN_LENGTH
+        value: "2"
+      - key: NAME_MAX_LENGTH
+        value: "100"
+      - key: PASSWORD_MIN_LENGTH
+        value: "8"
+      - key: PASSWORD_MAX_LENGTH
+        value: "128"
+      - key: CSRF_COOKIE_NAME
+        value: csrf_token
+      - key: CSRF_HEADER_NAME
+        value: x-csrf-token
+      - key: CSRF_TOKEN_BYTES
+        value: "32"
+      - key: CSRF_COOKIE_MAX_AGE_MS
+        value: "604800000"
+      - key: CSRF_EXCLUDED_PATHS
+        value: ""
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: AUTH_RATE_LIMIT_MAX
+        value: "20"
+      - key: API_RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: API_RATE_LIMIT_MAX
+        value: "60"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: parselfee-db
+          property: connectionString
+      - key: DB_SSL_ENABLED
+        value: "true"
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+      - key: DB_POOL_MAX
+        value: "10"
+      - key: DB_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: DB_CONNECTION_TIMEOUT_MS
+        value: "10000"
+      - key: ORDER_TEXT_MAX_LENGTH
+        value: "500"
+      - key: PICKUP_LOCATION_MAX_LENGTH
+        value: "100"
+      - key: DELIVERY_LOCATION_MAX_LENGTH
+        value: "100"
+      - key: ROOM_DETAILS_MAX_LENGTH
+        value: "200"
+      - key: ORDER_NOTES_MAX_LENGTH
+        value: "500"
+      - key: ORDER_SEARCH_MAX_LENGTH
+        value: "100"
+      - key: ORDER_LIST_MAX_LIMIT
+        value: "100"
+      - key: MY_ORDER_LIST_MAX_LIMIT
+        value: "100"
+      - key: DELIVERY_FEE_MIN
+        value: "5"
+      - key: DELIVERY_FEE_MAX
+        value: "500"
+      - key: DELIVERY_FEE_DEFAULT
+        value: "20"
+      - key: DELIVERY_FEE_SUGGESTIONS
+        value: "10,20,30,50"
+      - key: SCHEDULE_LEAD_MINUTES
+        value: "5"
+      - key: PICKUP_LOCATIONS
+        value: "Main Gate,Back Gate,Canteen,Mess,Library,Academic Block,Other"
+      - key: DELIVERY_LOCATIONS
+        value: "Room,Hostel Gate,Common Room,Study Hall"
+      - key: HOSTEL_MAX_LENGTH
+        value: "100"
+      - key: PROFILE_ROOM_MAX_LENGTH
+        value: "50"
+      - key: PHONE_MAX_LENGTH
+        value: "15"
+      - key: PHONE_PATTERN
+        value: "^[+\\d][+\\d\\s-]{6,14}$"
+      - key: MAP_TILE_URL
+        value: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      - key: MAP_MAX_ZOOM
+        value: "19"
+      - key: MAP_DEFAULT_ZOOM
+        value: "16"
+      - key: GEOLOCATION_TIMEOUT_MS
+        value: "10000"
+      - key: GEOLOCATION_MAXIMUM_AGE_MS
+        value: "5000"
+      - key: CSP_DEFAULT_SRC
+        value: "'self'"
+      - key: CSP_STYLE_SRC
+        value: "'self',https://fonts.googleapis.com,https://unpkg.com"
+      - key: CSP_FONT_SRC
+        value: "'self',https://fonts.gstatic.com"
+      - key: CSP_SCRIPT_SRC
+        value: "'self',https://unpkg.com"
+      - key: CSP_SCRIPT_SRC_ATTR
+        value: "'none'"
+      - key: CSP_IMG_SRC
+        value: "'self',data:,https://tile.openstreetmap.org,https://*.tile.openstreetmap.org,https://unpkg.com"
+      - key: CSP_FRAME_SRC
+        value: "'self',https://www.openstreetmap.org"
+      - key: CSP_CONNECT_SRC
+        value: "'self'"
