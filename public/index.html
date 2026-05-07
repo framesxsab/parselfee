@@ -97,6 +97,11 @@
         <button class="nav-link nav-action" data-page="profile" type="button">Profile</button>
     </div>
     <div class="nav-right">
+        <!-- Notification Bell -->
+        <button class="nav-bell" id="notifBell" type="button" aria-label="Notifications">
+            <span class="bell-icon">&#x1F514;</span>
+            <span class="bell-badge hidden" id="notifBadge">0</span>
+        </button>
         <span class="nav-user" id="navUser"></span>
         <button class="btn btn-sm btn-outline logout-action" type="button">Logout</button>
     </div>
@@ -104,6 +109,17 @@
         <span></span><span></span><span></span>
     </button>
 </nav>
+
+<!-- Notification Dropdown -->
+<div class="notif-dropdown hidden" id="notifDropdown">
+    <div class="notif-header">
+        <h4>Notifications</h4>
+        <button class="notif-clear-btn" id="notifClearBtn" type="button">Clear all</button>
+    </div>
+    <div class="notif-list" id="notifList">
+        <div class="notif-empty">No notifications yet</div>
+    </div>
+</div>
 
 <!-- Mobile Menu -->
 <div class="mobile-menu" id="mobileMenu">
@@ -193,6 +209,94 @@
         </div>
     </div>
 
+    <!-- Live Orders Ticker -->
+    <div class="live-ticker" id="liveTicker">
+        <div class="ticker-label"><span class="ticker-dot"></span> LIVE</div>
+        <div class="ticker-track">
+            <div class="ticker-content" id="tickerContent">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Category Cards (Swiggy-style) -->
+    <div class="section categories-section">
+        <h2 class="section-title">What do you need?</h2>
+        <div class="categories-grid" id="categoriesGrid">
+            <button class="category-card" data-category="food" type="button">
+                <div class="category-icon-wrap category-food">&#x1F35B;</div>
+                <span class="category-name">Food</span>
+                <span class="category-tag">Most Popular</span>
+            </button>
+            <button class="category-card" data-category="parcel" type="button">
+                <div class="category-icon-wrap category-parcel">&#x1F4E6;</div>
+                <span class="category-name">Parcels</span>
+                <span class="category-tag">Gate Pickup</span>
+            </button>
+            <button class="category-card" data-category="grocery" type="button">
+                <div class="category-icon-wrap category-grocery">&#x1F6D2;</div>
+                <span class="category-name">Grocery</span>
+                <span class="category-tag">Essentials</span>
+            </button>
+            <button class="category-card" data-category="documents" type="button">
+                <div class="category-icon-wrap category-docs">&#x1F4DA;</div>
+                <span class="category-name">Documents</span>
+                <span class="category-tag">Notes & Books</span>
+            </button>
+            <button class="category-card" data-category="medicine" type="button">
+                <div class="category-icon-wrap category-medicine">&#x1F48A;</div>
+                <span class="category-name">Medicine</span>
+                <span class="category-tag">Urgent</span>
+            </button>
+            <button class="category-card" data-category="other" type="button">
+                <div class="category-icon-wrap category-other">&#x2728;</div>
+                <span class="category-name">Other</span>
+                <span class="category-tag">Anything</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Promo Banners (Swiggy-style) -->
+    <div class="section promo-section">
+        <div class="promo-scroll" id="promoScroll">
+            <div class="promo-card promo-gradient-1">
+                <div class="promo-content">
+                    <span class="promo-badge">NEW</span>
+                    <h3>First Delivery Free</h3>
+                    <p>Your first delivery fee is on us. Try it out!</p>
+                </div>
+                <div class="promo-visual">&#x1F381;</div>
+            </div>
+            <div class="promo-card promo-gradient-2">
+                <div class="promo-content">
+                    <span class="promo-badge">EARN</span>
+                    <h3>Deliver & Earn</h3>
+                    <p>Make &#8377;500+ per week delivering between classes</p>
+                </div>
+                <div class="promo-visual">&#x1F4B0;</div>
+            </div>
+            <div class="promo-card promo-gradient-3">
+                <div class="promo-content">
+                    <span class="promo-badge">FAST</span>
+                    <h3>15-min Delivery</h3>
+                    <p>Average delivery time from gate to hostel room</p>
+                </div>
+                <div class="promo-visual">&#x26A1;</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Feed -->
+    <div class="section activity-section">
+        <div class="section-header-row">
+            <h2 class="section-title">Recent Activity</h2>
+            <button class="btn btn-sm btn-outline nav-action" data-page="browse" type="button">View All</button>
+        </div>
+        <div class="activity-feed" id="activityFeed">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
     <div class="section how-it-works">
         <h2 class="section-title">How it works</h2>
         <div class="steps-grid">
@@ -231,11 +335,23 @@
             <h1 class="page-title">Place an Order</h1>
             <p class="page-desc">Tell us what you need delivered. Set your terms.</p>
         </div>
+
+        <!-- Quick Category Selector -->
+        <div class="quick-category-bar" id="quickCategoryBar">
+            <button class="qcat-chip active" data-qcat="custom" type="button">Custom</button>
+            <button class="qcat-chip" data-qcat="food" type="button">&#x1F35B; Food</button>
+            <button class="qcat-chip" data-qcat="parcel" type="button">&#x1F4E6; Parcel</button>
+            <button class="qcat-chip" data-qcat="grocery" type="button">&#x1F6D2; Grocery</button>
+            <button class="qcat-chip" data-qcat="documents" type="button">&#x1F4DA; Docs</button>
+            <button class="qcat-chip" data-qcat="medicine" type="button">&#x1F48A; Medicine</button>
+        </div>
+
         <form class="order-form" id="orderForm">
             <div class="form-grid">
                 <div class="form-group full-width">
                     <label class="form-label">What do you need?</label>
                     <input type="text" class="form-input" id="itemDesc" placeholder="e.g., Biryani from Zomato at main gate" required>
+                    <div class="input-hint" id="itemHint">Be specific - include brand/restaurant name if applicable</div>
                 </div>
 
                 <div class="form-group">
@@ -264,6 +380,10 @@
                         <input type="number" class="form-input fee-input" id="deliveryFee" required>
                     </div>
                     <div class="fee-suggestions" id="feeSuggestions"></div>
+                    <div class="fee-insight" id="feeInsight">
+                        <span class="fee-insight-icon">&#x1F4A1;</span>
+                        <span>Average fee for similar orders: <strong>&#8377;20-30</strong></span>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -287,6 +407,28 @@
                 </div>
             </div>
 
+            <!-- Order Summary Card -->
+            <div class="order-summary-card" id="orderSummary">
+                <div class="summary-title">Order Summary</div>
+                <div class="summary-row">
+                    <span>Item</span>
+                    <span id="summaryItem">-</span>
+                </div>
+                <div class="summary-row">
+                    <span>Route</span>
+                    <span id="summaryRoute">-</span>
+                </div>
+                <div class="summary-row">
+                    <span>Timing</span>
+                    <span id="summaryTiming">ASAP</span>
+                </div>
+                <div class="summary-divider"></div>
+                <div class="summary-row summary-total">
+                    <span>Delivery Fee</span>
+                    <span id="summaryFee">&#8377;20</span>
+                </div>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary btn-lg btn-full" id="placeOrderBtn">
                     Post Order &mdash; &#8377;<span id="feePreview">20</span> delivery fee
@@ -301,8 +443,43 @@
 <section class="page" id="page-browse">
     <div class="page-container">
         <div class="page-header">
-            <h1 class="page-title">Available Deliveries</h1>
-            <p class="page-desc">Pick up orders, earn fees. Easy money between classes.</p>
+            <div class="page-header-row">
+                <div>
+                    <h1 class="page-title">Available Deliveries</h1>
+                    <p class="page-desc">Pick up orders, earn fees. Easy money between classes.</p>
+                </div>
+                <div class="live-count-badge" id="liveCountBadge">
+                    <span class="live-dot"></span>
+                    <span id="liveOrderCount">0</span> live orders
+                </div>
+            </div>
+        </div>
+
+        <!-- Earnings Summary Bar -->
+        <div class="earnings-bar" id="earningsBar">
+            <div class="earnings-item">
+                <span class="earnings-icon">&#x1F4B0;</span>
+                <div>
+                    <span class="earnings-value" id="browseEarned">&#8377;0</span>
+                    <span class="earnings-label">You've earned</span>
+                </div>
+            </div>
+            <div class="earnings-divider"></div>
+            <div class="earnings-item">
+                <span class="earnings-icon">&#x1F6F5;</span>
+                <div>
+                    <span class="earnings-value" id="browseDeliveries">0</span>
+                    <span class="earnings-label">Deliveries done</span>
+                </div>
+            </div>
+            <div class="earnings-divider"></div>
+            <div class="earnings-item">
+                <span class="earnings-icon">&#x2B50;</span>
+                <div>
+                    <span class="earnings-value" id="browseRating">New</span>
+                    <span class="earnings-label">Your rating</span>
+                </div>
+            </div>
         </div>
 
         <div class="browse-filters" id="browseFilters"></div>
@@ -330,9 +507,13 @@
         <div class="orders-grid" id="browseOrdersGrid"></div>
 
         <div class="empty-state hidden" id="browseEmpty">
-            <div class="empty-icon">&#x1F4AD;</div>
+            <div class="empty-illustration">
+                <div class="empty-circle"></div>
+                <div class="empty-icon">&#x1F4AD;</div>
+            </div>
             <h3>No orders right now</h3>
             <p>Check back soon. Orders pop up all the time!</p>
+            <button class="btn btn-outline btn-sm mt-2" onclick="renderBrowseOrders()">Refresh</button>
         </div>
     </div>
 </section>
@@ -350,12 +531,32 @@
             <button class="tab-btn" data-order-tab="accepted" type="button">Orders I'm Delivering</button>
         </div>
 
+        <!-- Active Order Banner (Swiggy-style) -->
+        <div class="active-order-banner hidden" id="activeOrderBanner">
+            <div class="active-order-pulse"></div>
+            <div class="active-order-info">
+                <span class="active-order-icon">&#x1F6F5;</span>
+                <div>
+                    <strong id="activeOrderTitle">Your order is being delivered</strong>
+                    <p id="activeOrderSub">Tap to track</p>
+                </div>
+            </div>
+            <span class="active-order-arrow">&rarr;</span>
+        </div>
+
         <div class="orders-list" id="myOrdersList"></div>
 
         <div class="empty-state hidden" id="myOrdersEmpty">
-            <div class="empty-icon">&#x1F4CB;</div>
+            <div class="empty-illustration">
+                <div class="empty-circle"></div>
+                <div class="empty-icon">&#x1F4CB;</div>
+            </div>
             <h3>Nothing here yet</h3>
             <p>Place an order or accept a delivery to get started!</p>
+            <div class="empty-actions">
+                <button class="btn btn-primary btn-sm nav-action" data-page="place-order" type="button">Place Order</button>
+                <button class="btn btn-outline btn-sm nav-action" data-page="browse" type="button">Start Delivering</button>
+            </div>
         </div>
     </div>
 </section>
@@ -365,7 +566,10 @@
     <div class="page-container">
         <div class="profile-layout">
             <div class="profile-card">
-                <div class="profile-avatar" id="profileAvatar">S</div>
+                <div class="profile-avatar-wrap">
+                    <div class="profile-avatar" id="profileAvatar">S</div>
+                    <div class="profile-level-badge" id="profileLevel">Lv 1</div>
+                </div>
                 <div class="profile-info">
                     <input type="text" class="profile-name-input" id="profileName" placeholder="Your Name">
                     <input type="email" class="profile-email-display" id="profileEmail" disabled>
@@ -376,29 +580,52 @@
                 <button class="btn btn-primary" id="saveProfileBtn" type="button">Save Profile</button>
             </div>
 
-            <div class="wallet-card">
-                <div class="wallet-header">
-                    <h3>Wallet</h3>
-                    <span class="wallet-badge">&#x26A1; Live</span>
-                </div>
-                <div class="wallet-balance">
-                    <span class="wallet-label">Total Earned</span>
-                    <span class="wallet-amount" id="walletEarned">&#8377;0</span>
-                </div>
-                <div class="wallet-balance">
-                    <span class="wallet-label">Total Spent on Fees</span>
-                    <span class="wallet-amount wallet-spent" id="walletSpent">&#8377;0</span>
-                </div>
-                <div class="wallet-divider"></div>
-                <div class="wallet-stats-row">
-                    <div class="wallet-stat">
-                        <span class="wallet-stat-num" id="profileDelivered">0</span>
-                        <span class="wallet-stat-label">Delivered</span>
+            <div class="profile-right-col">
+                <div class="wallet-card">
+                    <div class="wallet-header">
+                        <h3>Wallet</h3>
+                        <span class="wallet-badge">&#x26A1; Live</span>
                     </div>
-                    <div class="wallet-stat">
-                        <span class="wallet-stat-num" id="profileOrdered">0</span>
-                        <span class="wallet-stat-label">Ordered</span>
+                    <div class="wallet-balance">
+                        <span class="wallet-label">Total Earned</span>
+                        <span class="wallet-amount" id="walletEarned">&#8377;0</span>
                     </div>
+                    <div class="wallet-balance">
+                        <span class="wallet-label">Total Spent on Fees</span>
+                        <span class="wallet-amount wallet-spent" id="walletSpent">&#8377;0</span>
+                    </div>
+                    <div class="wallet-divider"></div>
+                    <div class="wallet-stats-row">
+                        <div class="wallet-stat">
+                            <span class="wallet-stat-num" id="profileDelivered">0</span>
+                            <span class="wallet-stat-label">Delivered</span>
+                        </div>
+                        <div class="wallet-stat">
+                            <span class="wallet-stat-num" id="profileOrdered">0</span>
+                            <span class="wallet-stat-label">Ordered</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Badges / Achievements -->
+                <div class="badges-card">
+                    <h3 class="badges-title">Achievements</h3>
+                    <div class="badges-grid" id="badgesGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Streak Card -->
+                <div class="streak-card" id="streakCard">
+                    <div class="streak-flame">&#x1F525;</div>
+                    <div class="streak-info">
+                        <span class="streak-count" id="streakCount">0</span>
+                        <span class="streak-label">day streak</span>
+                    </div>
+                    <div class="streak-bar">
+                        <div class="streak-progress" id="streakProgress" style="width: 0%"></div>
+                    </div>
+                    <span class="streak-hint">Deliver daily to keep your streak!</span>
                 </div>
             </div>
         </div>
@@ -410,6 +637,41 @@
     <div class="modal" id="orderModal">
         <button class="modal-close" id="modalCloseBtn" type="button">&times;</button>
         <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<!-- ===================== ORDER SUCCESS OVERLAY ===================== -->
+<div class="success-overlay hidden" id="successOverlay">
+    <div class="success-card">
+        <div class="success-checkmark">
+            <svg class="checkmark-svg" viewBox="0 0 52 52">
+                <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+        </div>
+        <h2 class="success-title">Order Placed!</h2>
+        <p class="success-code" id="successCode">-</p>
+        <div class="success-details">
+            <div class="success-detail-row">
+                <span>&#x1F4E6;</span>
+                <span id="successItem">-</span>
+            </div>
+            <div class="success-detail-row">
+                <span>&#x1F4CD;</span>
+                <span id="successRoute">-</span>
+            </div>
+            <div class="success-detail-row">
+                <span>&#x1F4B0;</span>
+                <span id="successFee">-</span>
+            </div>
+        </div>
+        <div class="success-eta">
+            <span class="eta-icon">&#x23F1;</span>
+            <span>Estimated pickup: <strong id="successEta">~15 mins</strong></span>
+        </div>
+        <button class="btn btn-primary btn-lg btn-full success-btn" id="successDoneBtn" type="button">
+            Track My Order <span class="btn-arrow">&rarr;</span>
+        </button>
     </div>
 </div>
 
@@ -429,6 +691,7 @@
     <button class="bottom-nav-item" data-page="browse" type="button">
         <span class="bottom-nav-icon">&#x1F6F5;</span>
         <span class="bottom-nav-label">Deliver</span>
+        <span class="bottom-nav-badge hidden" id="bottomNavBrowseBadge">0</span>
     </button>
     <button class="bottom-nav-item" data-page="my-orders" type="button">
         <span class="bottom-nav-icon">&#x1F4CB;</span>

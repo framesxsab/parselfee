@@ -1,5 +1,5 @@
 /* ============================================
-   PARSELFEE - Frontend Application
+   PARSELFEE - Swiggy/Zomato Grade Frontend
    All data from API, no localStorage
    ============================================ */
 
@@ -17,6 +17,8 @@ let trackingMap = null;
 let trackingMarker = null;
 let appConfig = null;
 let autoRefreshTimer = null;
+let notifications = [];
+let lastSuccessOrder = null;
 const AUTO_REFRESH_MS = 30000;
 
 // ---- API HELPER ----
@@ -212,6 +214,7 @@ async function handleLogout() {
     } catch (_) {}
     currentUser = null;
     document.getElementById('navbar').classList.add('hidden');
+    document.getElementById('bottomNav').classList.add('hidden');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-auth').classList.add('active');
     currentPage = 'auth';
@@ -277,10 +280,23 @@ function navigate(page) {
 
     document.getElementById('mobileMenu').classList.remove('open');
 
-    if (page === 'browse') renderBrowseOrders();
-    if (page === 'my-orders') renderMyOrders();
+    // Close notification dropdown
+    document.getElementById('notifDropdown').classList.add('hidden');
+
+    if (page === 'browse') {
+        renderBrowseOrders();
+        loadBrowseEarnings();
+    }
+    if (page === 'my-orders') {
+        renderMyOrders();
+        checkActiveOrders();
+    }
     if (page === 'profile') loadProfile();
-    if (page === 'home') updateHomeStats();
+    if (page === 'home') {
+        updateHomeStats();
+        loadActivityFeed();
+        loadLiveTicker();
+    }
 
     // Auto-refresh browse page every 30s (like Swiggy)
     clearInterval(autoRefreshTimer);
@@ -306,15 +322,36 @@ const feePreview = document.getElementById('feePreview');
 urgencySelect.addEventListener('change', () => {
     scheduleGroup.classList.toggle('hidden-form', urgencySelect.value !== 'scheduled');
     updateScheduleRequirements();
+    updateOrderSummary();
 });
 
 feeInput.addEventListener('input', () => {
     feePreview.textContent = feeInput.value || '0';
+    updateOrderSummary();
 });
+
+// Live order summary update
+document.getElementById('itemDesc').addEventListener('input', updateOrderSummary);
+document.getElementById('pickupLocation').addEventListener('change', updateOrderSummary);
+document.getElementById('deliverTo').addEventListener('change', updateOrderSummary);
+
+function updateOrderSummary() {
+    const item = document.getElementById('itemDesc').value.trim() || '-';
+    const pickup = document.getElementById('pickupLocation').value || '-';
+    const deliverTo = document.getElementById('deliverTo').value || '-';
+    const fee = feeInput.value || '0';
+    const timing = urgencySelect.options[urgencySelect.selectedIndex].text;
+
+    document.getElementById('summaryItem').textContent = item.length > 40 ? item.slice(0, 40) + '...' : item;
+    document.getElementById('summaryRoute').textContent = pickup !== '-' && deliverTo !== '-' ? `${pickup} → ${deliverTo}` : '-';
+    document.getElementById('summaryTiming').textContent = timing;
+    document.getElementById('summaryFee').textContent = rupee(fee);
+}
 
 function setFee(amount) {
     feeInput.value = amount;
     feePreview.textContent = amount;
+    updateOrderSummary();
 }
 
 function updateScheduleRequirements() {
@@ -328,6 +365,34 @@ function updateScheduleRequirements() {
     const soon = new Date(Date.now() + leadMinutes * 60 * 1000);
     soon.setSeconds(0, 0);
     scheduleInput.min = toDateTimeLocalValue(soon);
+}
+
+// ---- QUICK CATEGORY ----
+function handleCategorySelect(category) {
+    // Navigate to place order page with prefilled category hints
+    navigate('place-order');
+
+    const itemDesc = document.getElementById('itemDesc');
+    const prefills = {
+        food: 'Food delivery from ',
+        parcel: 'Package pickup from ',
+        grocery: 'Groceries from ',
+        documents: 'Documents/Notes from ',
+        medicine: 'Medicine from ',
+        other: ''
+    };
+
+    if (prefills[category] !== undefined) {
+        itemDesc.value = prefills[category];
+        itemDesc.focus();
+    }
+
+    // Update quick category bar active state
+    document.querySelectorAll('.qcat-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.qcat === category || (category !== 'custom' && c.dataset.qcat === category));
+    });
+
+    updateOrderSummary();
 }
 
 async function placeOrder(e) {
@@ -348,19 +413,45 @@ async function placeOrder(e) {
         };
 
         const data = await api('/orders', { method: 'POST', body });
-        showToast('Order posted! ' + data.order.order_code, 'success');
+
+        // Show Swiggy-style success overlay instead of just toast
+        lastSuccessOrder = data.order;
+        showSuccessOverlay(data.order, body);
+
         burstConfetti();
         if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
         document.getElementById('orderForm').reset();
         feeInput.value = appConfig.orders.deliveryFeeDefault;
         feePreview.textContent = appConfig.orders.deliveryFeeDefault;
         scheduleGroup.classList.add('hidden-form');
-        navigate('my-orders');
+        updateOrderSummary();
+
+        // Add notification
+        addNotification('order_placed', `Order ${data.order.order_code} placed!`, body.item_desc);
     } catch (err) {
         showToast(err.message, 'error');
     } finally {
         btn.classList.remove('loading');
     }
+}
+
+// ---- SUCCESS OVERLAY ----
+function showSuccessOverlay(order, body) {
+    document.getElementById('successCode').textContent = `Order #${order.order_code}`;
+    document.getElementById('successItem').textContent = body.item_desc;
+    document.getElementById('successRoute').textContent = `${body.pickup_location} → ${body.deliver_to}`;
+    document.getElementById('successFee').textContent = `${rupee(body.delivery_fee)} delivery fee`;
+
+    // Estimate based on urgency
+    const etaMap = { asap: '~10-15 mins', '30min': '~20-30 mins', '1hr': '~45-60 mins', scheduled: 'As scheduled' };
+    document.getElementById('successEta').textContent = etaMap[body.urgency] || '~15 mins';
+
+    document.getElementById('successOverlay').classList.remove('hidden');
+}
+
+function closeSuccessOverlay() {
+    document.getElementById('successOverlay').classList.add('hidden');
+    navigate('my-orders');
 }
 
 // ---- BROWSE ORDERS ----
@@ -405,6 +496,13 @@ async function renderBrowseOrders() {
         const data = await api('/orders?' + params.toString());
         const orders = data.orders;
 
+        // Update live count badge
+        const liveCount = document.getElementById('liveOrderCount');
+        if (liveCount) liveCount.textContent = orders.length;
+
+        // Update bottom nav badge
+        updateBrowseBadge(orders.length);
+
         if (orders.length === 0) {
             grid.innerHTML = '';
             empty.classList.remove('hidden');
@@ -416,19 +514,22 @@ async function renderBrowseOrders() {
             <div class="order-card stagger-${Math.min(i, 12)}" data-order-id="${order.id}">
                 <div class="order-card-header">
                     <div>
-                        <div class="order-card-title">${esc(order.item_desc)}</div>
-                        <span class="mini-status status-active">Open</span>
+                        <div class="order-card-title">${getEmoji(order.item_desc)} ${esc(order.item_desc)}</div>
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+                            <span class="mini-status status-active">Open</span>
+                            <span class="order-eta-badge">~${getEstimatedTime(order.urgency)}</span>
+                        </div>
                     </div>
                     <div class="order-card-fee">${rupee(order.delivery_fee)}</div>
                 </div>
                 <div class="order-card-meta">
                     <div class="order-meta-row">
                         <span class="order-meta-icon">&#x1F4CD;</span>
-                        <span>Pickup: ${esc(order.pickup_location)}</span>
+                        <span>Pickup: <strong>${esc(order.pickup_location)}</strong></span>
                     </div>
                     <div class="order-meta-row">
                         <span class="order-meta-icon">&#x1F3E0;</span>
-                        <span>Deliver: ${esc(order.deliver_to)} &mdash; ${esc(order.room_details)}</span>
+                        <span>Deliver: <strong>${esc(order.deliver_to)}</strong> &mdash; ${esc(order.room_details)}</span>
                     </div>
                     <div class="order-meta-row">
                         <span class="order-meta-icon">&#x23F0;</span>
@@ -442,7 +543,7 @@ async function renderBrowseOrders() {
                 <div class="order-card-footer">
                     <span class="order-time">${timeAgo(order.created_at)}</span>
                     <button class="btn btn-primary btn-sm" data-action="accept-order" data-order-id="${order.id}" type="button">
-                        Accept Delivery &rarr;
+                        Accept &rarr;
                     </button>
                 </div>
             </div>
@@ -451,6 +552,44 @@ async function renderBrowseOrders() {
         grid.innerHTML = '';
         empty.classList.remove('hidden');
     }
+}
+
+function getEstimatedTime(urgency) {
+    const map = { asap: '15 min', '30min': '30 min', '1hr': '1 hr', scheduled: 'Scheduled' };
+    return map[urgency] || '15 min';
+}
+
+function updateBrowseBadge(count) {
+    const badge = document.getElementById('bottomNavBrowseBadge');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+// ---- BROWSE EARNINGS ----
+async function loadBrowseEarnings() {
+    try {
+        const data = await api('/profile');
+        const user = data.user;
+        document.getElementById('browseEarned').textContent = rupee(user.total_earned || 0);
+        document.getElementById('browseDeliveries').textContent = user.deliveries_done || 0;
+
+        // Simple rating based on deliveries
+        const deliveries = user.deliveries_done || 0;
+        if (deliveries >= 50) {
+            document.getElementById('browseRating').textContent = '4.9';
+        } else if (deliveries >= 20) {
+            document.getElementById('browseRating').textContent = '4.7';
+        } else if (deliveries >= 5) {
+            document.getElementById('browseRating').textContent = '4.5';
+        } else {
+            document.getElementById('browseRating').textContent = 'New';
+        }
+    } catch (_) {}
 }
 
 // ---- MY ORDERS ----
@@ -490,6 +629,30 @@ async function renderMyOrders() {
     } catch (err) {
         list.innerHTML = '';
         empty.classList.remove('hidden');
+    }
+}
+
+// ---- ACTIVE ORDER CHECK ----
+async function checkActiveOrders() {
+    const banner = document.getElementById('activeOrderBanner');
+    if (!banner) return;
+
+    try {
+        const data = await api('/orders/mine?type=placed');
+        const active = data.orders.find(o => o.status === 'accepted' || o.status === 'picked_up');
+
+        if (active) {
+            banner.classList.remove('hidden');
+            document.getElementById('activeOrderTitle').textContent =
+                active.status === 'picked_up' ? 'Your order is on the way!' : 'Your order has been accepted';
+            document.getElementById('activeOrderSub').textContent =
+                `${active.item_desc} - Tap to track`;
+            banner.onclick = () => openOrderDetail(active.id);
+        } else {
+            banner.classList.add('hidden');
+        }
+    } catch (_) {
+        banner.classList.add('hidden');
     }
 }
 
@@ -837,6 +1000,7 @@ async function acceptOrder(orderId) {
     try {
         await api('/orders/' + orderId + '/accept', { method: 'PATCH' });
         showToast('Order accepted! Go pick it up.', 'success');
+        addNotification('order_accepted', 'You accepted an order!', 'Head to the pickup location now.');
         closeModal();
         if (currentPage === 'browse') renderBrowseOrders();
         if (currentPage === 'my-orders') renderMyOrders();
@@ -856,9 +1020,11 @@ async function updateStatus(orderId, newStatus, extraBody = {}) {
             showToast('Delivered! Fee earned.', 'success');
             burstConfetti();
             if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 80]);
+            addNotification('delivered', 'Delivery complete!', 'Fee has been credited to your wallet.');
         } else if (newStatus === 'picked_up') {
             showToast('Picked up! Head to delivery spot.', 'success');
             if (navigator.vibrate) navigator.vibrate(20);
+            addNotification('picked_up', 'Item picked up', 'Now head to the delivery location.');
         } else if (newStatus === 'cancelled') {
             showToast('Order cancelled.', 'error');
         }
@@ -892,9 +1058,43 @@ async function loadProfile() {
         document.getElementById('walletSpent').textContent = rupee(user.total_spent || 0);
         document.getElementById('profileDelivered').textContent = user.deliveries_done || 0;
         document.getElementById('profileOrdered').textContent = user.orders_placed || 0;
+
+        // Update level badge
+        const deliveries = user.deliveries_done || 0;
+        const level = deliveries >= 100 ? 10 : deliveries >= 50 ? 7 : deliveries >= 20 ? 5 : deliveries >= 10 ? 3 : deliveries >= 5 ? 2 : 1;
+        document.getElementById('profileLevel').textContent = `Lv ${level}`;
+
+        // Render badges
+        renderBadges(user);
+
+        // Render streak (simulated from deliveries count)
+        const streak = Math.min(deliveries, 7);
+        document.getElementById('streakCount').textContent = streak;
+        document.getElementById('streakProgress').style.width = `${(streak / 7) * 100}%`;
     } catch (err) {
         showToast(err.message, 'error');
     }
+}
+
+function renderBadges(user) {
+    const badges = [
+        { icon: '\u{1F476}', name: 'Newbie', condition: true },
+        { icon: '\u{1F6F5}', name: 'First Ride', condition: (user.deliveries_done || 0) >= 1 },
+        { icon: '\u{2B50}', name: '5 Stars', condition: (user.deliveries_done || 0) >= 5 },
+        { icon: '\u{1F525}', name: 'On Fire', condition: (user.deliveries_done || 0) >= 10 },
+        { icon: '\u{1F3C6}', name: 'Pro', condition: (user.deliveries_done || 0) >= 25 },
+        { icon: '\u{1F451}', name: 'Legend', condition: (user.deliveries_done || 0) >= 50 },
+        { icon: '\u{1F4B0}', name: 'Rich', condition: (user.total_earned || 0) >= 500 },
+        { icon: '\u{1F389}', name: 'Party', condition: (user.orders_placed || 0) >= 10 },
+    ];
+
+    const grid = document.getElementById('badgesGrid');
+    grid.innerHTML = badges.map(b => `
+        <div class="badge-item ${b.condition ? 'earned' : 'locked'}">
+            <span class="badge-icon">${b.icon}</span>
+            <span class="badge-name">${b.name}</span>
+        </div>
+    `).join('');
 }
 
 async function saveProfile() {
@@ -946,6 +1146,118 @@ function animateCounter(id, target) {
     requestAnimationFrame(tick);
 }
 
+// ---- LIVE TICKER ----
+async function loadLiveTicker() {
+    try {
+        const data = await api('/orders?status=open&sort=newest');
+        const orders = data.orders || [];
+        const tickerContent = document.getElementById('tickerContent');
+
+        if (orders.length === 0) {
+            tickerContent.innerHTML = '<span class="ticker-item">No live orders right now - be the first to post!</span>';
+            return;
+        }
+
+        // Double the items for seamless scrolling
+        const items = orders.slice(0, 8).map(o =>
+            `<span class="ticker-item">${getEmoji(o.item_desc)} <strong>${esc(o.item_desc)}</strong> &middot; ${esc(o.pickup_location)} &rarr; ${esc(o.deliver_to)} &middot; ${rupee(o.delivery_fee)}</span>`
+        ).join('');
+
+        tickerContent.innerHTML = items + items;
+    } catch (_) {
+        document.getElementById('tickerContent').innerHTML = '<span class="ticker-item">Loading live orders...</span>';
+    }
+}
+
+// ---- ACTIVITY FEED ----
+async function loadActivityFeed() {
+    try {
+        const data = await api('/orders?status=open&sort=newest');
+        const orders = (data.orders || []).slice(0, 6);
+        const feed = document.getElementById('activityFeed');
+
+        if (orders.length === 0) {
+            feed.innerHTML = '<div class="activity-card"><span class="activity-emoji">\u{1F4AD}</span><div class="activity-info"><span class="activity-title">No recent activity</span><span class="activity-meta">Check back later!</span></div></div>';
+            return;
+        }
+
+        feed.innerHTML = orders.map(o => `
+            <div class="activity-card" data-order-id="${o.id}">
+                <span class="activity-emoji">${getEmoji(o.item_desc)}</span>
+                <div class="activity-info">
+                    <span class="activity-title">${esc(o.item_desc)}</span>
+                    <span class="activity-meta">${esc(o.pickup_location)} &rarr; ${esc(o.deliver_to)}</span>
+                </div>
+                <span class="activity-fee">${rupee(o.delivery_fee)}</span>
+                <span class="activity-time">${timeAgo(o.created_at)}</span>
+            </div>
+        `).join('');
+    } catch (_) {}
+}
+
+// ---- NOTIFICATIONS ----
+function addNotification(type, title, message) {
+    const iconMap = {
+        order_placed: '\u{1F4E6}',
+        order_accepted: '\u2705',
+        picked_up: '\u{1F6F5}',
+        delivered: '\u{1F389}',
+        default: '\u{1F514}'
+    };
+
+    notifications.unshift({
+        icon: iconMap[type] || iconMap.default,
+        title,
+        message,
+        time: new Date().toISOString()
+    });
+
+    // Keep only latest 20
+    if (notifications.length > 20) notifications.pop();
+
+    updateNotifBadge();
+    renderNotifications();
+}
+
+function updateNotifBadge() {
+    const badge = document.getElementById('notifBadge');
+    if (notifications.length > 0) {
+        badge.textContent = notifications.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notifList');
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+        return;
+    }
+
+    list.innerHTML = notifications.map(n => `
+        <div class="notif-item">
+            <span class="notif-item-icon">${n.icon}</span>
+            <div>
+                <div class="notif-item-text"><strong>${esc(n.title)}</strong> ${esc(n.message)}</div>
+                <div class="notif-item-time">${timeAgo(n.time)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleNotifDropdown() {
+    const dropdown = document.getElementById('notifDropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+function clearNotifications() {
+    notifications = [];
+    updateNotifBadge();
+    renderNotifications();
+}
+
 // ---- HELPERS ----
 function rupee(n) { return '\u20B9' + n; }
 
@@ -975,9 +1287,13 @@ function getEmoji(desc) {
     if (/burger/i.test(l)) return '\u{1F354}';
     if (/ramen|noodle|maggi/i.test(l)) return '\u{1F35C}';
     if (/coffee|chai|tea/i.test(l)) return '\u2615';
-    if (/juice|drink|water/i.test(l)) return '\u{1F964}';
-    if (/book|notes/i.test(l)) return '\u{1F4DA}';
-    if (/medicine|med/i.test(l)) return '\u{1F48A}';
+    if (/juice|drink|water|cola|pepsi|coke/i.test(l)) return '\u{1F964}';
+    if (/book|notes|doc|print/i.test(l)) return '\u{1F4DA}';
+    if (/medicine|med|tablet/i.test(l)) return '\u{1F48A}';
+    if (/grocer|milk|bread|egg/i.test(l)) return '\u{1F6D2}';
+    if (/amazon|flipkart|parcel|package|courier/i.test(l)) return '\u{1F4E6}';
+    if (/laundry|cloth/i.test(l)) return '\u{1F455}';
+    if (/charger|cable|electronic/i.test(l)) return '\u{1F50C}';
     return '\u{1F4E6}';
 }
 
@@ -1043,7 +1359,15 @@ function showToast(message, type = 'success') {
 
 // ---- KEYBOARD ----
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+        // Close success overlay first, then modal
+        const successOverlay = document.getElementById('successOverlay');
+        if (!successOverlay.classList.contains('hidden')) {
+            closeSuccessOverlay();
+            return;
+        }
+        closeModal();
+    }
 });
 
 function setupEventListeners() {
@@ -1062,6 +1386,13 @@ function setupEventListeners() {
         if (e.target.id === 'modalOverlay') closeModal();
     });
 
+    // Notification bell
+    document.getElementById('notifBell').addEventListener('click', toggleNotifDropdown);
+    document.getElementById('notifClearBtn').addEventListener('click', clearNotifications);
+
+    // Success overlay
+    document.getElementById('successDoneBtn').addEventListener('click', closeSuccessOverlay);
+
     document.querySelectorAll('.nav-action').forEach(btn => {
         btn.addEventListener('click', () => navigate(btn.dataset.page));
     });
@@ -1072,6 +1403,31 @@ function setupEventListeners() {
 
     document.querySelectorAll('[data-order-tab]').forEach(btn => {
         btn.addEventListener('click', () => switchOrderTab(btn.dataset.orderTab, btn));
+    });
+
+    // Category cards on home page
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', () => handleCategorySelect(card.dataset.category));
+    });
+
+    // Quick category bar on place order page
+    document.querySelectorAll('.qcat-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.qcat-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            if (chip.dataset.qcat !== 'custom') {
+                handleCategorySelect(chip.dataset.qcat);
+            }
+        });
+    });
+
+    // Close notif dropdown when clicking outside
+    document.addEventListener('click', e => {
+        const dropdown = document.getElementById('notifDropdown');
+        const bell = document.getElementById('notifBell');
+        if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
     });
 
     document.addEventListener('click', handleDelegatedClick);
@@ -1119,6 +1475,7 @@ async function init() {
     }
 
     updateScheduleRequirements();
+    updateOrderSummary();
     setupEventListeners();
     setupBottomNav();
     setupOfflineDetection();
@@ -1159,11 +1516,11 @@ function burstConfetti() {
     const burst = document.createElement('div');
     burst.className = 'confetti-burst';
     const colors = ['#f2a154', '#e84545', '#2ecc71', '#a87bff', '#ffc87a', '#ff6b6b'];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 40; i++) {
         const particle = document.createElement('div');
         particle.className = 'confetti-particle';
-        const angle = (Math.PI * 2 * i) / 30;
-        const distance = 80 + Math.random() * 120;
+        const angle = (Math.PI * 2 * i) / 40;
+        const distance = 80 + Math.random() * 160;
         particle.style.background = colors[Math.floor(Math.random() * colors.length)];
         particle.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
         particle.style.setProperty('--ty', `${Math.sin(angle) * distance - 40}px`);
